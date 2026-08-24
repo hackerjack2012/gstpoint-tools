@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Models
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String?
+  emailVerified Boolean   @default(false)
+  emailToken    String?
+  tokenExpires  DateTime?
+  plan          Plan      @default(FREE)
+  usageCount    Int       @default(0)
+  lastUsedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  payments      Payment[]
+  files         File[]
+
+  @@map("users")
+}
+
+model Payment {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Float
+  currency  String    @default("INR")
+  plan      Plan
+  status    PaymentStatus @default(PENDING)
+  qrCode    String?
+  paymentId String?   // From payment gateway
+  verifiedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("payments")
+}
+
+model File {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filename    String
+  originalName String
+  size        Int
+  mimeType    String
+  ledgerType  LedgerType
+  gstRate     Float
+  delayDays   Int
+  resultPath  String?
+  status      FileStatus @default(PROCESSING)
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("files")
+}
+
+// Enums
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum LedgerType {
+  SINGLE
+  MULTI
+}
+
+enum FileStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
