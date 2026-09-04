@@ -3,7 +3,7 @@ import axios from "axios";
 // Configure axios instance for backend API
 // Update this URL to match your backend server
 const apiClient = axios.create({
-  baseURL: "http://localhost:8000",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
   timeout: 60000, // 60 seconds for file uploads
   headers: {
     "Content-Type": "multipart/form-data",
