@@ -41,9 +41,9 @@ export const processPaymentMatcher = async (
   formData.append("gst_rate", params.gst_rate.toString());
 
   try {
-    const response = await apiClient.post("/payment-matcher/", formData, {
-      responseType: "blob",
-    });
+    const response = await axios.post("/api/payment-matcher", formData, {
+  responseType: "blob",
+});
 
     // Create a URL for the downloaded file
     const fileUrl = window.URL.createObjectURL(new Blob([response.data]));
@@ -61,15 +61,36 @@ export const processPaymentMatcher = async (
 
     return { fileUrl, fileName };
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const errorMsg = error.response?.data?.message ||
-                      error.response?.data?.detail ||
-                      error.message ||
-                      "Failed to process file";
-      throw new Error(errorMsg);
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+
+    // Error response comes back as Blob because responseType = "blob"
+    if (data instanceof Blob) {
+      try {
+        const text = await data.text();
+        const parsed = JSON.parse(text);
+
+        throw new Error(
+          parsed.detail || parsed.message || "Failed to process file"
+        );
+      } catch (parseError) {
+        if (parseError instanceof Error &&
+            parseError.message !== "Failed to process file") {
+          throw parseError;
+        }
+      }
     }
-    throw new Error("Failed to process file");
+
+    throw new Error(
+      data?.detail ||
+      data?.message ||
+      error.message ||
+      "Failed to process file"
+    );
   }
+
+  throw new Error("Failed to process file");
+}
 };
 
 /**
