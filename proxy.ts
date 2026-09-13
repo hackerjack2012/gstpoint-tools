@@ -12,6 +12,7 @@ export const config = {
     "/filing-checker/:path*",
     "/calculators/:path*",
     "/admin/:path*",
+    "/auth/:path*",
   ],
 };
 
@@ -20,21 +21,21 @@ export async function proxy(request: NextRequest) {
   const token = await getToken({ req: request });
   const isLoggedIn = !!token;
 
-  // Redirect to login if trying to access protected routes without being logged in
-  if (!isLoggedIn) {
-    const loginUrl = new URL("/auth/login", nextUrl);
-    loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Redirect logged in users away from auth pages
   const authRoutes = ["/auth/login", "/auth/signup"];
   const isAuthRoute = authRoutes.some((route) =>
     nextUrl.pathname.startsWith(route)
   );
 
+  // Redirect logged-in users away from auth pages
   if (isAuthRoute && isLoggedIn) {
     return NextResponse.redirect(new URL("/dashboard", nextUrl));
+  }
+
+  // Redirect to login if trying to access protected routes without being logged in
+  if (!isLoggedIn && !isAuthRoute) {
+    const loginUrl = new URL("/auth/login", nextUrl);
+    loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
