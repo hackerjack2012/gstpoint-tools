@@ -91,9 +91,17 @@ export const processPaymentMatcher = async (
 };
 
 /**
- * Check if backend is running
+ * Check if backend is running via Next.js proxy (avoids CORS issues with preview URLs).
+ * Falls back to direct backend check.
  */
 export const checkBackendHealth = async (): Promise<boolean> => {
+  // Prefer server-proxied check (no CORS, works for all Vercel preview URLs)
+  try {
+    const res = await fetch("/api/health", { method: "GET" });
+    if (res.ok) return true;
+  } catch {
+    // fall through to direct check
+  }
   try {
     const response = await apiClient.get("/");
     return response.status === 200;
