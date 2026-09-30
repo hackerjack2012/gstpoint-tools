@@ -23,7 +23,7 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-2xl bg-slate-50 p-6 shadow-sm">
               <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-4">
                 <span className="text-xl">💰</span>
@@ -31,6 +31,16 @@ export default async function Home() {
               <h3 className="text-lg font-bold text-slate-900">Payment Matching</h3>
               <p className="mt-2 text-sm text-slate-600">
                 Automatically match supplier payments using FIFO logic and calculate delayed payment interest
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-6 shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center mb-4">
+                <span className="text-xl">🔍</span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">GST Bulk Search</h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Search multiple GSTINs in bulk and download comprehensive taxpayer & return filing reports
               </p>
             </div>
 
@@ -377,6 +387,7 @@ export default async function Home() {
               <h4 className="font-bold text-white mb-4">Products</h4>
               <ul className="space-y-2">
                 <li><Link href="/payment-matcher" className="text-slate-400 hover:text-white">Payment Matcher</Link></li>
+                <li><Link href="/gst-bulk-search" className="text-slate-400 hover:text-white">GST Bulk Search</Link></li>
                 <li><Link href="#" className="text-slate-400 hover:text-white">GSTR-2B Reconciliation</Link></li>
                 <li><Link href="#" className="text-slate-400 hover:text-white">Return Filing Checker</Link></li>
                 <li><Link href="#" className="text-slate-400 hover:text-white">GST Calculators</Link></li>

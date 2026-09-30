@@ -9,6 +9,13 @@ const tools = [
     href: "/payment-matcher",
   },
   {
+    title: "GST Bulk Search",
+    description:
+      "Search multiple GSTINs in bulk and download comprehensive taxpayer & return filing reports.",
+    status: "Available" as const,
+    href: "/gst-bulk-search",
+  },
+  {
     title: "GSTR-2B Reconciliation",
     description:
       "Compare Purchase Register with GSTR-2B and identify mismatches instantly.",
