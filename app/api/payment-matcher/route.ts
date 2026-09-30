@@ -73,15 +73,42 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Render successfully processed the file.
-    // Only now count usage.
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        usageCount: {
-          increment: 1,
+    // Record file in history and update usage in a transaction
+    const formDataEntries = {
+      ledgerType: formData.get("ledger_type") as string,
+      gstRate: parseFloat(formData.get("gst_rate") as string || "18"),
+      delayDays: parseInt(formData.get("delay_threshold") as string || "180"),
+    };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          usageCount: {
+            increment: 1,
+          },
+          lastUsedAt: new Date(),
         },
-        lastUsedAt: new Date(),
-      },
+      });
+
+      const fileField = formData.get("file");
+      const originalName = fileField instanceof File ? fileField.name : "ledger.xlsx";
+      const fileSize = fileField instanceof File ? fileField.size : 0;
+
+      await tx.file.create({
+        data: {
+          userId: user.id,
+          filename: `matched_${Date.now()}_${originalName}`,
+          originalName: originalName,
+          size: fileSize,
+          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          ledgerType: formDataEntries.ledgerType === "multi" ? "MULTI" : "SINGLE",
+          gstRate: formDataEntries.gstRate,
+          delayDays: formDataEntries.delayDays,
+          status: "COMPLETED",
+          processedAt: new Date(),
+        },
+      });
     });
 
     // 7. Return generated Excel file to browser
