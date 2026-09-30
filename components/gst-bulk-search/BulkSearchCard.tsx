@@ -3,9 +3,14 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { processBulkSearch, checkBackendHealth } from "@/lib/api-client";
-import { Search, Upload, FileSpreadsheet, Download, Loader2, Trash2 } from "lucide-react";
+import { Search, Upload, FileSpreadsheet, Download, Loader2, Trash2, Calendar, FileText } from "lucide-react";
 
 export default function BulkSearchCard() {
+  const [searchMode, setSearchMode] = useState<"taxpayer" | "return">("taxpayer");
+  const [financialYear, setFinancialYear] = useState<string>("2024-25");
+  const [month, setMonth] = useState<string>("All");
+  const [returnType, setReturnType] = useState<string>("Both");
+
   const [gstinsText, setGstinsText] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -56,33 +61,137 @@ export default function BulkSearchCard() {
     setResultFileName("");
 
     try {
-      const { fileUrl, fileName } = await processBulkSearch(file || undefined, gstinsText.trim() || undefined);
+      const { fileUrl, fileName } = await processBulkSearch(
+        file || undefined,
+        gstinsText.trim() || undefined,
+        searchMode,
+        financialYear,
+        month,
+        returnType
+      );
       setResultUrl(fileUrl);
       setResultFileName(fileName);
-      toast.success("GST Bulk Search completed successfully!");
+      toast.success(
+        searchMode === "taxpayer"
+          ? "GST Bulk Taxpayer Search completed successfully!"
+          : "GSTR Filing Status search completed successfully!"
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to process bulk search";
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, [file, gstinsText]);
+  }, [file, gstinsText, searchMode, financialYear, month, returnType]);
 
   return (
     <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+      {/* Mode Tabs */}
+      <div className="flex rounded-xl bg-muted p-1 mb-6 max-w-md mx-auto">
+        <button
+          onClick={() => setSearchMode("taxpayer")}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+            searchMode === "taxpayer"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Search className="w-4 h-4" />
+          Bulk Taxpayer Details
+        </button>
+        <button
+          onClick={() => setSearchMode("return")}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+            searchMode === "return"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          Return Filing Status
+        </button>
+      </div>
+
       <div className="flex items-center gap-3 mb-6">
         <div className="p-3 bg-primary/10 rounded-lg text-primary">
-          <Search className="w-6 h-6" />
+          {searchMode === "taxpayer" ? <Search className="w-6 h-6" /> : <FileText className="w-6 h-6" />}
         </div>
         <div>
-          <h2 className="text-xl font-bold">GST Bulk Search</h2>
+          <h2 className="text-xl font-bold">
+            {searchMode === "taxpayer" ? "Bulk Taxpayer Details Search" : "GSTR-1 & GSTR-3B Return Filing Status"}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Search multiple GSTINs in bulk and download comprehensive taxpayer & return filing reports.
+            {searchMode === "taxpayer"
+              ? "Query taxpayer legal name, status, jurisdiction, principal place of business, and HSN codes."
+              : "Check filing status of GSTR-1 and GSTR-3B for specified financial years and periods."}
           </p>
         </div>
       </div>
 
       <div className="space-y-6">
+        {/* Return Filing Options */}
+        {searchMode === "return" && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-xl border border-border">
+            <div>
+              <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">
+                Financial Year
+              </label>
+              <select
+                value={financialYear}
+                onChange={(e) => setFinancialYear(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="2027-28">2027-28</option>
+                <option value="2026-27">2026-27</option>
+                <option value="2025-26">2025-26</option>
+                <option value="2024-25">2024-25</option>
+                <option value="2023-24">2023-24</option>
+                <option value="2022-23">2022-23</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">
+                Period / Month
+              </label>
+              <select
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="All">All Months / Periods</option>
+                <option value="January">January</option>
+                <option value="February">February</option>
+                <option value="March">March</option>
+                <option value="April">April</option>
+                <option value="May">May</option>
+                <option value="June">June</option>
+                <option value="July">July</option>
+                <option value="August">August</option>
+                <option value="September">September</option>
+                <option value="October">October</option>
+                <option value="November">November</option>
+                <option value="December">December</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">
+                Return Type
+              </label>
+              <select
+                value={returnType}
+                onChange={(e) => setReturnType(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="Both">Both (GSTR-1 & 3B)</option>
+                <option value="GSTR-1">GSTR-1 Only</option>
+                <option value="GSTR-3B">GSTR-3B Only</option>
+              </select>
+            </div>
+          </div>
+        )}
+
         {/* Text Input */}
         <div>
           <label className="block text-sm font-medium mb-2">
@@ -108,7 +217,7 @@ export default function BulkSearchCard() {
           {!file ? (
             <label className="border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
               <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-              <span className="text-sm font-medium">Upload Excel or CSV containing GSTINs</span>
+              <span className="text-sm font-medium">Upload Excel or CSV containing GSTIN column</span>
               <span className="text-xs text-muted-foreground mt-1">Supports .xlsx, .xls, .csv</span>
               <input type="file" className="hidden" accept=".xlsx,.xls,.csv" onChange={handleFileChange} />
             </label>
@@ -140,12 +249,12 @@ export default function BulkSearchCard() {
           {isLoading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              Processing Bulk Search...
+              {searchMode === "taxpayer" ? "Processing Taxpayer Search..." : "Fetching Return Filing Status..."}
             </>
           ) : (
             <>
               <Search className="w-5 h-5" />
-              Run GST Bulk Search
+              {searchMode === "taxpayer" ? "Run Bulk Taxpayer Search" : "Check Return Filing Status"}
             </>
           )}
         </button>
@@ -154,7 +263,7 @@ export default function BulkSearchCard() {
         {resultUrl && (
           <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between mt-4">
             <div>
-              <p className="text-sm font-semibold text-green-700 dark:text-green-300">Search Complete!</p>
+              <p className="text-sm font-semibold text-green-700 dark:text-green-300">Report Ready!</p>
               <p className="text-xs text-muted-foreground">{resultFileName}</p>
             </div>
             <a

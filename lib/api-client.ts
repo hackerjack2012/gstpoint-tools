@@ -92,7 +92,11 @@ export const processPaymentMatcher = async (
 
 export const processBulkSearch = async (
   file?: File,
-  gstinsText?: string
+  gstinsText?: string,
+  searchMode: "taxpayer" | "return" = "taxpayer",
+  financialYear: string = "2024-25",
+  month: string = "All",
+  returnType: string = "Both"
 ): Promise<{ fileUrl: string; fileName: string }> => {
   const formData = new FormData();
   if (file) {
@@ -101,6 +105,10 @@ export const processBulkSearch = async (
   if (gstinsText) {
     formData.append("gstins_text", gstinsText);
   }
+  formData.append("search_mode", searchMode);
+  formData.append("financial_year", financialYear);
+  formData.append("month", month);
+  formData.append("return_type", returnType);
 
   try {
     const response = await axios.post("/api/gst-bulk-search", formData, {
