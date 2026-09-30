@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUser, findUserByEmail, setEmailToken } from "@/app/api/auth/[...nextauth]/route";
 import { generate } from "otp-generator";
 import nodemailer from "nodemailer";
+import { prisma } from "@/lib/prisma";
 
 // Configure email transporter
 const transporter = nodemailer.createTransport({
@@ -107,11 +108,16 @@ export async function POST(request: NextRequest) {
     await setEmailToken(newUser.id, otp);
 
     // Send verification email
-const emailSent = await sendVerificationEmail(email, otp);
+    const emailSent = await sendVerificationEmail(email, otp);
 
-if (!emailSent) {
-  console.error("Verification email could not be sent");
-}
+    if (!emailSent) {
+      // Rollback user creation if email sending fails
+      await prisma.user.delete({ where: { id: newUser.id } });
+      return NextResponse.json(
+        { success: false, error: "Failed to send verification email. Please try again." },
+        { status: 500 }
+      );
+    }
 
     // Return user without password
     const { password: _, ...userWithoutPassword } = newUser;
