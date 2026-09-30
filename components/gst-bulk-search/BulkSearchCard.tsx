@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { processBulkSearch, checkBackendHealth } from "@/lib/api-client";
-import { Search, Upload, FileSpreadsheet, Download, Loader2, Trash2, Calendar, FileText } from "lucide-react";
+import { Search, Upload, FileSpreadsheet, Download, Loader2, Trash2, FileText } from "lucide-react";
+import { Progress, ProgressTrack, ProgressIndicator, ProgressValue } from "@/components/ui/progress";
 
 export default function BulkSearchCard() {
   const [searchMode, setSearchMode] = useState<"taxpayer" | "return">("taxpayer");
@@ -14,8 +15,42 @@ export default function BulkSearchCard() {
   const [gstinsText, setGstinsText] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [progress, setProgress] = useState<number>(0);
+  const [progressStatus, setProgressStatus] = useState<string>("");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultFileName, setResultFileName] = useState<string>("");
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isLoading) {
+      setProgress(10);
+      setProgressStatus("Initializing and validating GSTIN list...");
+
+      timer = setTimeout(() => {
+        setProgress(35);
+        setProgressStatus(searchMode === "taxpayer" ? "Connecting to GST Portal & Solving CAPTCHA..." : "Fetching Return Filing Status & GSTR Data...");
+      }, 1500);
+
+      const timer2 = setTimeout(() => {
+        setProgress(70);
+        setProgressStatus(searchMode === "taxpayer" ? "Retrieving Taxpayer Details & HSN Codes..." : "Filtering Returns by Period and Type...");
+      }, 4000);
+
+      const timer3 = setTimeout(() => {
+        setProgress(90);
+        setProgressStatus("Generating styled Excel report with openpyxl...");
+      }, 8000);
+
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+      };
+    } else {
+      setProgress(0);
+      setProgressStatus("");
+    }
+  }, [isLoading, searchMode]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -69,6 +104,8 @@ export default function BulkSearchCard() {
         month,
         returnType
       );
+      setProgress(100);
+      setProgressStatus("Complete!");
       setResultUrl(fileUrl);
       setResultFileName(fileName);
       toast.success(
@@ -240,6 +277,24 @@ export default function BulkSearchCard() {
           )}
         </div>
 
+        {/* Progress Section during loading */}
+        {isLoading && (
+          <div className="p-4 bg-muted/40 border border-border rounded-xl space-y-3 animate-pulse">
+            <div className="flex justify-between items-center text-sm font-medium">
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                {progressStatus}
+              </span>
+              <span className="text-primary font-bold">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2 w-full bg-muted rounded-full overflow-hidden">
+              <ProgressTrack className="h-full bg-muted">
+                <ProgressIndicator className="h-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
+              </ProgressTrack>
+            </Progress>
+          </div>
+        )}
+
         {/* Process Button */}
         <button
           onClick={handleProcess}
@@ -249,7 +304,7 @@ export default function BulkSearchCard() {
           {isLoading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              {searchMode === "taxpayer" ? "Processing Taxpayer Search..." : "Fetching Return Filing Status..."}
+              {searchMode === "taxpayer" ? `Processing Taxpayer Search (${progress}%)...` : `Fetching Return Filing Status (${progress}%)...`}
             </>
           ) : (
             <>
