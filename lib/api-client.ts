@@ -90,6 +90,55 @@ export const processPaymentMatcher = async (
 }
 };
 
+export const processBulkSearch = async (
+  file?: File,
+  gstinsText?: string
+): Promise<{ fileUrl: string; fileName: string }> => {
+  const formData = new FormData();
+  if (file) {
+    formData.append("file", file);
+  }
+  if (gstinsText) {
+    formData.append("gstins_text", gstinsText);
+  }
+
+  try {
+    const response = await axios.post("/api/gst-bulk-search", formData, {
+      responseType: "blob",
+    });
+
+    const fileUrl = window.URL.createObjectURL(new Blob([response.data]));
+    const contentDisposition = response.headers["content-disposition"];
+    let fileName = "GST_Bulk_Search_Report.xlsx";
+
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (fileNameMatch && fileNameMatch[1]) {
+        fileName = fileNameMatch[1];
+      }
+    }
+
+    return { fileUrl, fileName };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const data = error.response?.data;
+      if (data instanceof Blob) {
+        try {
+          const text = await data.text();
+          const parsed = JSON.parse(text);
+          throw new Error(parsed.detail || parsed.message || "Failed to process bulk search");
+        } catch (parseError) {
+          if (parseError instanceof Error && parseError.message !== "Failed to process bulk search") {
+            throw parseError;
+          }
+        }
+      }
+      throw new Error(data?.detail || data?.message || error.message || "Failed to process bulk search");
+    }
+    throw new Error("Failed to process bulk search");
+  }
+};
+
 /**
  * Check if backend is running via Next.js proxy (avoids CORS issues with preview URLs).
  * Falls back to direct backend check.

@@ -10,6 +10,12 @@ export default function DashboardPage() {
       description: "Automatically match supplier payments using FIFO logic",
     },
     {
+      name: "GST Bulk Search",
+      href: "/gst-bulk-search",
+      status: "Available",
+      description: "Search multiple GSTINs in bulk and download taxpayer reports",
+    },
+    {
       name: "GSTR-2B Reconciliation",
       href: "/reconciliation",
       status: "Coming Soon",
