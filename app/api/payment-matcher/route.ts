@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Send file to Railway backend
+    // 5. Send file to Render backend
     const backendResponse = await fetch(
       `${backendUrl.replace(/\/$/, "")}/payment-matcher/`,
       {
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Railway successfully processed the file.
+    // 6. Render successfully processed the file.
     // Only now count usage.
     await prisma.user.update({
       where: { id: user.id },
