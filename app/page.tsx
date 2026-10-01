@@ -7,6 +7,34 @@ import Link from "next/link";
 export default async function Home() {
   const session = await getServerSession(authOptions);
 
+  if (session) {
+    return (
+      <main className="min-h-screen bg-slate-50 py-12">
+        <div className="mx-auto max-w-7xl px-6 mb-8">
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">
+                Welcome back, {session.user?.name || session.user?.email || "User"}! 👋
+              </h1>
+              <p className="mt-2 text-slate-600">
+                Select a tool below to start automating your GST tasks.
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <Link
+                href="/account"
+                className="rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
+              >
+                My Account
+              </Link>
+            </div>
+          </div>
+        </div>
+        <Tools />
+      </main>
+    );
+  }
+
   return (
     <>
       <Hero />
@@ -275,94 +303,38 @@ export default async function Home() {
                   </div>
                 </div>
               </div>
-
-              <div className="mt-8 flex gap-4">
-                <Link
-                  href="#"
-                  className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition"
-                >
-                  <span className="text-xl">f</span>
-                </Link>
-                <Link
-                  href="#"
-                  className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition"
-                >
-                  <span className="text-xl">in</span>
-                </Link>
-                <Link
-                  href="#"
-                  className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition"
-                >
-                  <span className="text-xl">X</span>
-                </Link>
-                <Link
-                  href="#"
-                  className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition"
-                >
-                  <span className="text-xl">ig</span>
-                </Link>
-              </div>
             </div>
 
-            <div className="rounded-2xl bg-slate-50 p-8">
-              <h3 className="text-2xl font-bold text-slate-900">Send us a message</h3>
-              <p className="mt-2 text-slate-600">
-                Fill out the form and we'll get back to you as soon as possible.
-              </p>
-
-              <form className="mt-8 space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div>
-                    <label htmlFor="name" className="block font-semibold text-slate-700 mb-2">
-                      Name
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      className="w-full rounded-xl border border-slate-200 p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Your name"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block font-semibold text-slate-700 mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      className="w-full rounded-xl border border-slate-200 p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Your email"
-                    />
-                  </div>
-                </div>
-
+            <div className="rounded-3xl bg-slate-50 p-8 border border-slate-200">
+              <h3 className="text-2xl font-bold text-slate-900 mb-6">Send Us a Message</h3>
+              <form className="space-y-4">
                 <div>
-                  <label htmlFor="subject" className="block font-semibold text-slate-700 mb-2">
-                    Subject
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Your Name</label>
                   <input
                     type="text"
-                    id="subject"
-                    className="w-full rounded-xl border border-slate-200 p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Subject"
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-blue-600 focus:outline-none"
+                    placeholder="John Doe"
                   />
                 </div>
-
                 <div>
-                  <label htmlFor="message" className="block font-semibold text-slate-700 mb-2">
-                    Message
-                  </label>
-                  <textarea
-                    id="message"
-                    rows={5}
-                    className="w-full rounded-xl border border-slate-200 p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Your message"
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-blue-600 focus:outline-none"
+                    placeholder="john@example.com"
                   />
                 </div>
-
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Message</label>
+                  <textarea
+                    rows={4}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:border-blue-600 focus:outline-none"
+                    placeholder="How can we help you?"
+                  ></textarea>
+                </div>
                 <button
                   type="submit"
-                  className="w-full rounded-xl bg-blue-600 py-4 text-lg font-semibold text-white transition hover:bg-blue-700"
+                  className="w-full rounded-xl bg-blue-600 py-3 text-white font-semibold hover:bg-blue-700 transition"
                 >
                   Send Message
                 </button>
@@ -371,57 +343,6 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-slate-900 text-white py-12">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="grid gap-8 md:grid-cols-4">
-            <div>
-              <h4 className="text-xl font-bold text-white mb-4">GSTPoint Tools</h4>
-              <p className="text-slate-400">
-                Professional GST Automation Platform for CAs, GST practitioners, and businesses.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-bold text-white mb-4">Products</h4>
-              <ul className="space-y-2">
-                <li><Link href="/payment-matcher" className="text-slate-400 hover:text-white">Payment Matcher</Link></li>
-                <li><Link href="/gst-bulk-search" className="text-slate-400 hover:text-white">GST Bulk Search</Link></li>
-                <li><Link href="#" className="text-slate-400 hover:text-white">GSTR-2B Reconciliation</Link></li>
-                <li><Link href="#" className="text-slate-400 hover:text-white">Return Filing Checker</Link></li>
-                <li><Link href="#" className="text-slate-400 hover:text-white">GST Calculators</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-bold text-white mb-4">Resources</h4>
-              <ul className="space-y-2">
-                <li><Link href="/pricing" className="text-slate-400 hover:text-white">Pricing</Link></li>
-                <li><Link href="#" className="text-slate-400 hover:text-white">Documentation</Link></li>
-                <li><Link href="#" className="text-slate-400 hover:text-white">Blog</Link></li>
-                <li><Link href="#" className="text-slate-400 hover:text-white">FAQ</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-bold text-white mb-4">Legal</h4>
-              <ul className="space-y-2">
-                <li><Link href="#" className="text-slate-400 hover:text-white">Privacy Policy</Link></li>
-                <li><Link href="#" className="text-slate-400 hover:text-white">Terms of Service</Link></li>
-                <li><Link href="#" className="text-slate-400 hover:text-white">Refund Policy</Link></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="mt-8 pt-8 border-t border-slate-800 text-center text-slate-400">
-            <p>© {new Date().getFullYear()} GSTPoint Tools. All rights reserved.</p>
-            <p className="mt-2 text-sm">
-              Made with ❤️ for GST professionals in India
-            </p>
-          </div>
-        </div>
-      </footer>
     </>
   );
 }
