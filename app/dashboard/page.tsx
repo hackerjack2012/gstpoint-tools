@@ -16,16 +16,16 @@ export default function DashboardPage() {
       description: "Search multiple GSTINs in bulk and download taxpayer reports",
     },
     {
+      name: "Return Filing Checker",
+      href: "/filing-checker",
+      status: "Available",
+      description: "Check filing status of multiple GSTINs in one go and export the results",
+    },
+    {
       name: "GSTR-2B Reconciliation",
       href: "/reconciliation",
       status: "Coming Soon",
       description: "Compare Purchase Register with GSTR-2B",
-    },
-    {
-      name: "Bulk GST Return Checker",
-      href: "/filing-checker",
-      status: "Coming Soon",
-      description: "Check filing status of multiple GSTINs",
     },
     {
       name: "GST Calculators",
@@ -47,7 +47,7 @@ export default function DashboardPage() {
             Select a tool to start your work.
           </p>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {tools.map((tool) => (
               <Link
                 key={tool.name}

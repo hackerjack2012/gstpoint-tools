@@ -11,9 +11,16 @@ const tools = [
   {
     title: "GST Bulk Search",
     description:
-      "Search multiple GSTINs in bulk and download comprehensive taxpayer & return filing reports.",
+      "Search multiple GSTINs in bulk and download comprehensive taxpayer reports.",
     status: "Available" as const,
     href: "/gst-bulk-search",
+  },
+  {
+    title: "Return Filing Checker",
+    description:
+      "Check filing status of multiple GSTINs in one go and export the results.",
+    status: "Available" as const,
+    href: "/filing-checker",
   },
   {
     title: "GSTR-2B Reconciliation",
@@ -21,13 +28,6 @@ const tools = [
       "Compare Purchase Register with GSTR-2B and identify mismatches instantly.",
     status: "Coming Soon" as const,
     href: "/reconciliation",
-  },
-  {
-    title: "Return Filing Checker",
-    description:
-      "Check filing status of multiple GSTINs in one go and export the results.",
-    status: "Coming Soon" as const,
-    href: "/filing-checker",
   },
   {
     title: "GST Calculators",
@@ -53,7 +53,7 @@ export default function Tools() {
           </p>
         </div>
 
-        <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {tools.map((tool) => (
             <ToolCard key={tool.title} {...tool} />
           ))}
