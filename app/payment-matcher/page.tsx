@@ -11,7 +11,7 @@ export default function PaymentMatcherPage() {
           <div className="mb-8 flex items-center justify-between">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" /> Back to Dashboard
             </Link>
@@ -29,7 +29,7 @@ export default function PaymentMatcherPage() {
               Payment Matcher
             </h1>
             <p className="mt-3 text-lg text-slate-600">
-              Automate supplier payment matching using FIFO logic, calculate delayed payment interest, and verify Rule 37 compliance.
+              Upload your supplier ledger (Date, Debit, Credit format) and automatically match payments using FIFO logic, calculate delayed payment interest, and verify Rule 37 compliance.
             </p>
           </div>
 
@@ -44,7 +44,7 @@ export default function PaymentMatcherPage() {
                 <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm mb-3">1</div>
                 <h3 className="font-bold text-slate-900 mb-2">Prepare Your Ledger</h3>
                 <p className="text-sm text-slate-600">
-                  Ensure your Excel/CSV file contains columns for <strong className="text-slate-800">Invoice Date, Invoice Number, Supplier Name, GSTIN, Invoice Amount, Payment Date, and Payment Amount</strong>. Download the sample template above for exact column structure.
+                  Ensure your Excel/CSV file follows the standard <strong className="text-slate-800">Date, Debit, Credit</strong> ledger format (as shown in standard bank/supplier statements). Download the sample template above for exact structure.
                 </p>
               </div>
 
