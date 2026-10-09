@@ -2,6 +2,13 @@ import ToolCard from "@/components/shared/ToolCard";
 
 const tools = [
   {
+    title: "GST Portal Downloader",
+    description:
+      "Chrome extension to automatically download DRC-03 files and Refunds (Applications, Notices, Replies, Orders) with client queue & Excel export.",
+    status: "Available" as const,
+    href: "/gst-portal-downloader",
+  },
+  {
     title: "Payment Matcher",
     description:
       "Automatically match supplier payments using FIFO logic and calculate delayed payment interest.",
