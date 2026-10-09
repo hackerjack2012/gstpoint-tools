@@ -7,37 +7,36 @@ import Link from "next/link";
 export default async function Home() {
   const session = await getServerSession(authOptions);
 
-  if (session) {
-    return (
-      <main className="min-h-screen bg-slate-50 py-12">
-        <div className="mx-auto max-w-7xl px-6 mb-8">
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">
-                Welcome back, {session.user?.name || session.user?.email || "User"}! 👋
-              </h1>
-              <p className="mt-2 text-slate-600">
-                Select a tool below to start automating your GST tasks.
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <Link
-                href="/account"
-                className="rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
-              >
-                My Account
-              </Link>
+  return (
+    <main className="min-h-screen bg-slate-50">
+      {session ? (
+        <div className="py-12">
+          <div className="mx-auto max-w-7xl px-6 mb-8">
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900">
+                  Welcome back, {session.user?.name || session.user?.email || "User"}! 👋
+                </h1>
+                <p className="mt-2 text-slate-600">
+                  Select a tool below to start automating your GST tasks.
+                </p>
+              </div>
+              <div className="flex gap-4">
+                <Link
+                  href="/account"
+                  className="rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  My Account
+                </Link>
+              </div>
             </div>
           </div>
         </div>
-        <Tools />
-      </main>
-    );
-  }
+      ) : (
+        <Hero />
+      )}
 
-  return (
-    <>
-      <Hero />
+      <Tools />
 
       {/* Features Section */}
       <section id="features" className="bg-white py-24">
@@ -178,8 +177,6 @@ export default async function Home() {
           </div>
         </section>
       )}
-
-      <Tools />
 
       {/* Testimonials Section */}
       <section className="bg-slate-50 py-24">
@@ -343,6 +340,6 @@ export default async function Home() {
           </div>
         </div>
       </section>
-    </>
+    </main>
   );
 }
