@@ -39,13 +39,31 @@ export default function AccountPage() {
         { id: "1", amount: 499, currency: "INR", plan: "PRO", status: "COMPLETED", date: "2024-07-25", paymentId: "PAY123456" },
       ]);
 
-      // Fetch recent files (mock data for now)
-      setRecentFiles([
-        { id: "1", filename: "ledger_july.xlsx", status: "COMPLETED", date: "2024-07-29", size: "2.5 MB" },
-        { id: "2", filename: "purchases.xlsx", status: "COMPLETED", date: "2024-07-28", size: "1.8 MB" },
-      ]);
+      // Fetch user's actual files from API (ensures users only see their own files)
+      const res = await fetch("/api/user/files");
+      if (res.ok) {
+        const data = await res.json();
+        setRecentFiles(data.files || []);
+      }
     } catch (error) {
       toast.error("Failed to fetch data");
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    try {
+      const res = await fetch(`/api/user/files?id=${fileId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        toast.success("File deleted successfully");
+        setRecentFiles(recentFiles.filter((f) => f.id !== fileId));
+      } else {
+        const data = await res.json();
+        toast.error(data.detail || "Failed to delete file");
+      }
+    } catch (error) {
+      toast.error("Failed to delete file");
     }
   };
 
@@ -481,7 +499,10 @@ export default function AccountPage() {
                           <button className="px-3 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm">
                             Download
                           </button>
-                          <button className="px-3 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 text-sm">
+                          <button
+                            onClick={() => handleDeleteFile(file.id)}
+                            className="px-3 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 text-sm"
+                          >
                             Delete
                           </button>
                         </div>
