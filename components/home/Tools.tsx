@@ -33,8 +33,8 @@ const tools = [
     title: "GSTR-2B Reconciliation",
     description:
       "Compare Purchase Register with GSTR-2B and identify mismatches instantly.",
-    status: "Coming Soon" as const,
-    href: "/reconciliation",
+    status: "Available" as const,
+    href: "/smart-reconcile",
   },
   {
     title: "GST Calculators",
