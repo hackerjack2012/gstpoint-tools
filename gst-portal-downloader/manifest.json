@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "GST Portal Downloader - by Rahul Pal",
+  "version": "0.3.1",
+  "minimum_chrome_version": "116",
+  "description": "Download DRC-03 application files and Refund case documents in monthly batches.",
+  "permissions": [
+    "storage",
+    "downloads",
+    "scripting",
+    "activeTab",
+    "debugger",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "https://services.gst.gov.in/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://services.gst.gov.in/services/*",
+        "https://services.gst.gov.in/litserv/auth/case/*"
+      ],
+      "js": [
+        "common.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "side_panel": {
+    "default_path": "popup.html"
+  }
+}
