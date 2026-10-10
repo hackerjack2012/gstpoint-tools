@@ -60,58 +60,92 @@ export async function POST(req: NextRequest) {
       const textContent = await gstr2bFile.text();
       const jsonData = JSON.parse(textContent);
       let flattenedRows: any[] = [];
+      const parseInvoices = (invoices: any[], gstin: string, supplierName: string, docTypeDefault: string) => {
+        if (!Array.isArray(invoices)) return;
+        invoices.forEach((inv: any) => {
+          const invoiceNo = inv.inum || inv.invoice_no || inv.inv_num || inv.note_num || "";
+          const invoiceDate = inv.idt || inv.invoice_date || inv.dt || inv.note_dt || "";
+          const taxableValue = Number(inv.val || inv.taxable_value || inv.txval || 0);
+          const invoiceValue = Number(inv.val || inv.tot_val || taxableValue);
+          const docType = inv.typ || inv.doc_type || docTypeDefault;
+
+          let igst = 0, cgst = 0, sgst = 0, cess = 0, gstRate = 0;
+          const items = inv.itms || inv.items || [];
+          if (Array.isArray(items) && items.length > 0) {
+            items.forEach((item: any) => {
+              const itemDetails = item.itm_det || item;
+              igst += Number(itemDetails.iamt || itemDetails.igst || 0);
+              cgst += Number(itemDetails.camt || itemDetails.cgst || 0);
+              sgst += Number(itemDetails.samt || itemDetails.sgst || 0);
+              cess += Number(itemDetails.csamt || itemDetails.cess || 0);
+              gstRate = Number(itemDetails.rt || itemDetails.rate || gstRate);
+            });
+          } else {
+            igst = Number(inv.igst || inv.iamt || 0);
+            cgst = Number(inv.cgst || inv.camt || 0);
+            sgst = Number(inv.sgst || inv.samt || 0);
+            cess = Number(inv.cess || inv.csamt || 0);
+            gstRate = Number(inv.rt || inv.rate || 0);
+          }
+
+          flattenedRows.push({
+            "GSTIN": gstin,
+            "Supplier Name": supplierName,
+            "Invoice Number": invoiceNo,
+            "Invoice Date": invoiceDate,
+            "Document Type": docType,
+            "Taxable Value": taxableValue,
+            "Invoice Value": invoiceValue,
+            "IGST": igst,
+            "CGST": cgst,
+            "SGST": sgst,
+            "Cess": cess,
+            "GST Rate": gstRate,
+            "Return Period": jsonData.ret_period || jsonData.fp || "",
+          });
+        });
+      };
+
+      // 1. B2B Invoices
       const b2bSuppliers = jsonData.b2b || jsonData.data?.b2b || [];
       if (Array.isArray(b2bSuppliers)) {
         b2bSuppliers.forEach((supplier: any) => {
           const gstin = supplier.ctin || supplier.gstin || "";
           const supplierName = supplier.cname || supplier.trade_name || supplier.sup_name || "";
-          const invoices = supplier.inv || supplier.invoices || [];
-          if (Array.isArray(invoices)) {
-            invoices.forEach((inv: any) => {
-              const invoiceNo = inv.inum || inv.invoice_no || inv.inv_num || "";
-              const invoiceDate = inv.idt || inv.invoice_date || inv.dt || "";
-              const taxableValue = inv.val || inv.taxable_value || inv.txval || 0;
-              const invoiceValue = inv.val || inv.tot_val || 0;
-              const docType = inv.typ || inv.doc_type || "INV";
-
-              let igst = 0, cgst = 0, sgst = 0, cess = 0, gstRate = 0;
-              const items = inv.itms || inv.items || [];
-              if (Array.isArray(items) && items.length > 0) {
-                items.forEach((item: any) => {
-                  const itemDetails = item.itm_det || item;
-                  igst += Number(itemDetails.iamt || itemDetails.igst || 0);
-                  cgst += Number(itemDetails.camt || itemDetails.cgst || 0);
-                  sgst += Number(itemDetails.samt || itemDetails.sgst || 0);
-                  cess += Number(itemDetails.csamt || itemDetails.cess || 0);
-                  gstRate = Number(itemDetails.rt || itemDetails.rate || gstRate);
-                });
-              } else {
-                igst = Number(inv.igst || inv.iamt || 0);
-                cgst = Number(inv.cgst || inv.camt || 0);
-                sgst = Number(inv.sgst || inv.samt || 0);
-                cess = Number(inv.cess || inv.csamt || 0);
-                gstRate = Number(inv.rt || inv.rate || 0);
-              }
-
-              flattenedRows.push({
-                "GSTIN": gstin,
-                "Supplier Name": supplierName,
-                "Invoice Number": invoiceNo,
-                "Invoice Date": invoiceDate,
-                "Document Type": docType,
-                "Taxable Value": taxableValue,
-                "Invoice Value": invoiceValue,
-                "IGST": igst,
-                "CGST": cgst,
-                "SGST": sgst,
-                "Cess": cess,
-                "GST Rate": gstRate,
-                "Return Period": jsonData.ret_period || jsonData.fp || "",
-              });
-            });
-          }
+          parseInvoices(supplier.inv || supplier.invoices || [], gstin, supplierName, "INV");
         });
       }
+
+      // 2. B2BA
+      const b2baSuppliers = jsonData.b2ba || jsonData.data?.b2ba || [];
+      if (Array.isArray(b2baSuppliers)) {
+        b2baSuppliers.forEach((supplier: any) => {
+          const gstin = supplier.ctin || supplier.gstin || "";
+          const supplierName = supplier.cname || supplier.trade_name || supplier.sup_name || "";
+          parseInvoices(supplier.inv || supplier.invoices || [], gstin, supplierName, "INV-A");
+        });
+      }
+
+      // 3. CDNR
+      const cdnrSuppliers = jsonData.cdnr || jsonData.data?.cdnr || [];
+      if (Array.isArray(cdnrSuppliers)) {
+        cdnrSuppliers.forEach((supplier: any) => {
+          const gstin = supplier.ctin || supplier.gstin || "";
+          const supplierName = supplier.cname || supplier.trade_name || supplier.sup_name || "";
+          parseInvoices(supplier.nt || supplier.notes || [], gstin, supplierName, "CRN");
+        });
+      }
+
+      // 4. CDNRA
+      const cdnraSuppliers = jsonData.cdnra || jsonData.data?.cdnra || [];
+      if (Array.isArray(cdnraSuppliers)) {
+        cdnraSuppliers.forEach((supplier: any) => {
+          const gstin = supplier.ctin || supplier.gstin || "";
+          const supplierName = supplier.cname || supplier.trade_name || supplier.sup_name || "";
+          parseInvoices(supplier.nt || supplier.notes || [], gstin, supplierName, "CRN-A");
+        });
+      }
+
       if (flattenedRows.length === 0) {
         flattenedRows.push({
           "GSTIN": jsonData.gstin || "",
