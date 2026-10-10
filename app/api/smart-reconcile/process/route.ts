@@ -65,6 +65,48 @@ function parseDecimal(val: any): any {
   return isNaN(num) ? new Decimal(0) : new Decimal(num);
 }
 
+function normalizeDate(val: any): string {
+  if (!val) return "";
+  if (typeof val === "number") {
+    // Excel serial date e.g. 46238
+    const utcDays = Math.floor(val - 25569);
+    const utcValue = utcDays * 86400;
+    const dateInfo = new Date(utcValue * 1000);
+    if (!isNaN(dateInfo.getTime())) {
+      const y = dateInfo.getUTCFullYear();
+      const m = String(dateInfo.getUTCMonth() + 1).padStart(2, "0");
+      const d = String(dateInfo.getUTCDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+  }
+  if (val instanceof Date) {
+    if (!isNaN(val.getTime())) {
+      const y = val.getFullYear();
+      const m = String(val.getMonth() + 1).padStart(2, "0");
+      const d = String(val.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+  }
+  const str = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const parts = str.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+    } else {
+      return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+    }
+  }
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, "0");
+    const d = String(parsed.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  return str;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -155,7 +197,7 @@ export async function POST(req: NextRequest) {
           supplierName: String(getVal("supplierName") || ""),
           invoiceNo,
           normInvoiceNo: analyzeInvoice(invoiceNo).separatorNormalized,
-          invoiceDate: String(getVal("invoiceDate") || ""),
+          invoiceDate: normalizeDate(getVal("invoiceDate")),
           docType: String(getVal("docType") || "INV").toUpperCase(),
           taxableValue: parseDecimal(getVal("taxableValue")).toNumber(),
           invoiceValue: parseDecimal(getVal("invoiceValue")).toNumber(),
@@ -247,10 +289,10 @@ export async function POST(req: NextRequest) {
         let found = candidate2bList.find(
           i =>
             i.invoiceNo.trim().toUpperCase() === pr.invoiceNo.trim().toUpperCase() &&
-            new Decimal(i.taxableValue).eq(pr.taxableValue) &&
-            new Decimal(i.igst).eq(pr.igst) &&
-            new Decimal(i.cgst).eq(pr.cgst) &&
-            new Decimal(i.sgst).eq(pr.sgst)
+            new Decimal(i.taxableValue).minus(pr.taxableValue).abs().lte(2.0) &&
+            new Decimal(i.igst).minus(pr.igst).abs().lte(2.0) &&
+            new Decimal(i.cgst).minus(pr.cgst).abs().lte(2.0) &&
+            new Decimal(i.sgst).minus(pr.sgst).abs().lte(2.0)
         );
 
         if (found) {
@@ -266,9 +308,10 @@ export async function POST(req: NextRequest) {
           if (found) {
             matched2bItem = found;
             const isTaxMatch =
-              new Decimal(matched2bItem.taxableValue).eq(pr.taxableValue) &&
-              new Decimal(matched2bItem.igst).eq(pr.igst) &&
-              new Decimal(matched2bItem.cgst).eq(pr.cgst);
+              new Decimal(matched2bItem.taxableValue).minus(pr.taxableValue).abs().lte(2.0) &&
+              new Decimal(matched2bItem.igst).minus(pr.igst).abs().lte(2.0) &&
+              new Decimal(matched2bItem.cgst).minus(pr.cgst).abs().lte(2.0) &&
+              new Decimal(matched2bItem.sgst).minus(pr.sgst).abs().lte(2.0);
             matchStatus = isTaxMatch ? "NORMALIZED" : "AMOUNT_MISMATCH";
             confidence = isTaxMatch ? 0.95 : 0.8;
             remarks = isTaxMatch
