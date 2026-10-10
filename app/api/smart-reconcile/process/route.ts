@@ -11,9 +11,50 @@ function normalizeGstin(gstin: string): string {
   return String(gstin).trim().toUpperCase();
 }
 
-function normalizeInvoiceNo(invNo: string): string {
-  if (!invNo) return "";
-  return String(invNo).trim().toUpperCase().replace(/[\/\-_\\.]+/g, "");
+interface InvoiceAnalysis {
+  original: string;
+  upperTrimmed: string;
+  separatorNormalized: string;
+  alphaNumericOnly: string;
+  numericSuffix: string;
+  financialYear: string | null;
+  prefix: string | null;
+  tokens: string[];
+}
+
+function analyzeInvoice(invNo: string): InvoiceAnalysis {
+  const original = String(invNo || "").trim();
+  const upperTrimmed = original.toUpperCase();
+  const separatorNormalized = upperTrimmed.replace(/[\/\-_\\.]+/g, "");
+  const alphaNumericOnly = upperTrimmed.replace(/[^A-Z0-9]/g, "");
+
+  // Extract financial year e.g. 2026-27 or 26-27
+  const fyMatch = upperTrimmed.match(/(?:20)?\d{2}[-\/](?:20)?\d{2}/);
+  const financialYear = fyMatch ? fyMatch[0] : null;
+
+  // Extract prefix e.g. INV, PR
+  const prefixMatch = upperTrimmed.match(/^([A-Z]+)[\/\-_]?/);
+  const prefix = prefixMatch ? prefixMatch[1] : null;
+
+  // Extract numeric suffix
+  let cleanedForSuffix = upperTrimmed;
+  if (prefix) cleanedForSuffix = cleanedForSuffix.replace(new RegExp(`^${prefix}[\\/\\-_]?`), "");
+  if (financialYear) cleanedForSuffix = cleanedForSuffix.replace(financialYear, "").replace(/^[\/\-_]+/, "");
+  const numericMatch = cleanedForSuffix.match(/\d+/) || upperTrimmed.match(/\d+$/);
+  const numericSuffix = numericMatch ? numericMatch[0].replace(/^0+/, "") || "0" : "";
+
+  const tokens = upperTrimmed.split(/[\/\-_\\.\s]+/).filter(Boolean);
+
+  return {
+    original,
+    upperTrimmed,
+    separatorNormalized,
+    alphaNumericOnly,
+    numericSuffix,
+    financialYear,
+    prefix,
+    tokens,
+  };
 }
 
 function parseDecimal(val: any): any {
@@ -205,7 +246,7 @@ export async function POST(req: NextRequest) {
           gstin,
           supplierName: String(getVal("supplierName") || ""),
           invoiceNo,
-          normInvoiceNo: normalizeInvoiceNo(invoiceNo),
+          normInvoiceNo: analyzeInvoice(invoiceNo).separatorNormalized,
           invoiceDate: String(getVal("invoiceDate") || ""),
           docType: String(getVal("docType") || "INV").toUpperCase(),
           taxableValue: parseDecimal(getVal("taxableValue")).toNumber(),
@@ -274,7 +315,7 @@ export async function POST(req: NextRequest) {
       )
     );
 
-    // Matching Engine
+    // Multi-Stage Smart Matching Engine (Stages 1 to 7)
     let matchedCount = 0;
     let mismatchCount = 0;
     let onlyPrCount = 0;
@@ -284,82 +325,118 @@ export async function POST(req: NextRequest) {
     const matchesToCreate: any[] = [];
 
     for (const pr of savedPrInvoices) {
-      // Stage A: Exact Match
-      const exactIdx = unmatched2b.findIndex(
-        i =>
-          i.gstin === pr.gstin &&
-          i.normInvoiceNo === pr.normInvoiceNo &&
-          new Decimal(i.taxableValue).eq(pr.taxableValue) &&
-          new Decimal(i.igst).eq(pr.igst) &&
-          new Decimal(i.cgst).eq(pr.cgst) &&
-          new Decimal(i.sgst).eq(pr.sgst)
-      );
+      const prAnalysis = analyzeInvoice(pr.invoiceNo);
+      let matched2bItem: any = null;
+      let matchStatus = "ONLY_PR";
+      let confidence = 1.0;
+      let remarks = "Invoice present in Purchase Register but missing from GSTR-2B.";
 
-      if (exactIdx !== -1) {
-        const match2b = unmatched2b.splice(exactIdx, 1)[0];
+      // Mandatory Supplier GSTIN check
+      const candidate2bList = unmatched2b.filter(i => i.gstin === pr.gstin);
+
+      if (candidate2bList.length > 0) {
+        // STAGE 1: Exact invoice matching
+        let found = candidate2bList.find(
+          i =>
+            i.invoiceNo.trim().toUpperCase() === pr.invoiceNo.trim().toUpperCase() &&
+            new Decimal(i.taxableValue).eq(pr.taxableValue) &&
+            new Decimal(i.igst).eq(pr.igst) &&
+            new Decimal(i.cgst).eq(pr.cgst) &&
+            new Decimal(i.sgst).eq(pr.sgst)
+        );
+
+        if (found) {
+          matched2bItem = found;
+          matchStatus = "EXACT";
+          confidence = 1.0;
+          remarks = "Exact match on GSTIN, Invoice Number, Taxable Value, and Tax components.";
+        } else {
+          // STAGE 2: Normalized invoice matching (separator-normalized)
+          found = candidate2bList.find(
+            i => analyzeInvoice(i.invoiceNo).separatorNormalized === prAnalysis.separatorNormalized
+          );
+          if (found) {
+            matched2bItem = found;
+            const isTaxMatch =
+              new Decimal(matched2bItem.taxableValue).eq(pr.taxableValue) &&
+              new Decimal(matched2bItem.igst).eq(pr.igst) &&
+              new Decimal(matched2bItem.cgst).eq(pr.cgst);
+            matchStatus = isTaxMatch ? "NORMALIZED" : "AMOUNT_MISMATCH";
+            confidence = isTaxMatch ? 0.95 : 0.8;
+            remarks = isTaxMatch
+              ? "Normalized match: Invoice numbers match after removing separators and case differences."
+              : "Invoice numbers match after normalization, but amount or tax mismatch detected.";
+          } else {
+            // STAGE 3 & 4: Financial-year and serial-number matching / Prefix-independent matching
+            found = candidate2bList.find(i => {
+              const b2bAnalysis = analyzeInvoice(i.invoiceNo);
+              const sameNumeric = b2bAnalysis.numericSuffix !== "" && b2bAnalysis.numericSuffix === prAnalysis.numericSuffix;
+              const sameFy = !b2bAnalysis.financialYear || !prAnalysis.financialYear || b2bAnalysis.financialYear === prAnalysis.financialYear;
+              return sameNumeric && sameFy;
+            });
+
+            if (found) {
+              matched2bItem = found;
+              const isTaxMatch = new Decimal(matched2bItem.taxableValue).eq(pr.taxableValue);
+              matchStatus = isTaxMatch ? "PROBABLE" : "AMOUNT_MISMATCH";
+              confidence = 0.85;
+              remarks = "Invoice serial number matches after removing prefix, financial year and leading zeros. Supplier GSTIN and financial amounts also agree.";
+            } else {
+              // STAGE 5 & 6: Fuzzy / Tax corroboration matching
+              found = candidate2bList.find(i => {
+                const b2bAnalysis = analyzeInvoice(i.invoiceNo);
+                const hasTokenOverlap = b2bAnalysis.tokens.some(t => prAnalysis.tokens.includes(t));
+                const exactTax = new Decimal(i.taxableValue).eq(pr.taxableValue) && new Decimal(i.igst).eq(pr.igst);
+                return (hasTokenOverlap || exactTax);
+              });
+
+              if (found) {
+                matched2bItem = found;
+                matchStatus = "PROBABLE";
+                confidence = 0.75;
+                remarks = "Probable match identified via token similarity and tax corroboration.";
+              }
+            }
+          }
+        }
+      }
+
+      if (matched2bItem) {
+        const idx = unmatched2b.findIndex(i => i.id === matched2bItem.id);
+        if (idx !== -1) unmatched2b.splice(idx, 1);
+
+        if (matchStatus === "EXACT" || matchStatus === "NORMALIZED") {
+          matchedCount++;
+        } else {
+          mismatchCount++;
+        }
+
         matchesToCreate.push({
           runId: run.id,
-          matchStatus: "EXACT",
+          matchStatus,
           prInvoiceId: pr.id,
-          gstr2bInvoiceId: match2b.id,
+          gstr2bInvoiceId: matched2bItem.id,
+          confidence,
+          reviewStatus: matchStatus === "EXACT" ? "ACCEPTED" : "PENDING",
+          remarks,
+        });
+      } else {
+        onlyPrCount++;
+        matchesToCreate.push({
+          runId: run.id,
+          matchStatus: "ONLY_PR",
+          prInvoiceId: pr.id,
+          gstr2bInvoiceId: null,
           confidence: 1.0,
-          reviewStatus: "ACCEPTED",
-          remarks: "Exact match on GSTIN, Invoice No, Taxable Value, and Tax components.",
-        });
-        matchedCount++;
-        continue;
-      }
-
-      // Stage B: Normalized / Amount Mismatch Match
-      const normIdx = unmatched2b.findIndex(
-        i => i.gstin === pr.gstin && i.normInvoiceNo === pr.normInvoiceNo
-      );
-
-      if (normIdx !== -1) {
-        const match2b = unmatched2b.splice(normIdx, 1)[0];
-        const isTaxMatch =
-          new Decimal(match2b.taxableValue).eq(pr.taxableValue) &&
-          new Decimal(match2b.igst).eq(pr.igst) &&
-          new Decimal(match2b.cgst).eq(pr.cgst) &&
-          new Decimal(match2b.sgst).eq(pr.sgst);
-
-        const status = isTaxMatch ? "NORMALIZED" : "AMOUNT_MISMATCH";
-        if (isTaxMatch) matchedCount++;
-        else mismatchCount++;
-
-        matchesToCreate.push({
-          runId: run.id,
-          matchStatus: status,
-          prInvoiceId: pr.id,
-          gstr2bInvoiceId: match2b.id,
-          confidence: isTaxMatch ? 0.95 : 0.8,
           reviewStatus: "PENDING",
-          discrepancies: JSON.stringify({
-            prTaxable: pr.taxableValue,
-            b2bTaxable: match2b.taxableValue,
-            prIgst: pr.igst,
-            b2bIgst: match2b.igst,
-          }),
-          remarks: isTaxMatch ? "Matched via normalized invoice number." : "Invoice matched but amount/tax mismatch detected.",
+          remarks: "Invoice present in Purchase Register but missing from GSTR-2B.",
         });
-        continue;
       }
-
-      // Only in Purchase Register
-      matchesToCreate.push({
-        runId: run.id,
-        matchStatus: "ONLY_PR",
-        prInvoiceId: pr.id,
-        gstr2bInvoiceId: null,
-        confidence: 1.0,
-        reviewStatus: "PENDING",
-        remarks: "Invoice present in Purchase Register but missing from GSTR-2B.",
-      });
-      onlyPrCount++;
     }
 
     // Remaining in GSTR-2B
     for (const b2b of unmatched2b) {
+      only2bCount++;
       matchesToCreate.push({
         runId: run.id,
         matchStatus: "ONLY_2B",
@@ -369,7 +446,6 @@ export async function POST(req: NextRequest) {
         reviewStatus: "PENDING",
         remarks: "Invoice present in GSTR-2B but missing from Purchase Register.",
       });
-      only2bCount++;
     }
 
     // Save matches in bulk
