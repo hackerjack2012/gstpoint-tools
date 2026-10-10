@@ -144,6 +144,26 @@ export default function SmartReconcileDashboard() {
                         >
                           <Download className="w-4 h-4" /> Export Excel
                         </a>
+                        <button
+                          onClick={async () => {
+                            if (!confirm("Are you sure you want to delete this reconciliation run?")) return;
+                            try {
+                              const res = await fetch(`/api/smart-reconcile/runs/${run.id}`, { method: "DELETE" });
+                              const json = await res.json();
+                              if (json.success) {
+                                setRuns(runs.filter(r => r.id !== run.id));
+                              } else {
+                                alert(json.error || "Failed to delete run");
+                              }
+                            } catch (err: any) {
+                              alert("Failed to delete run: " + err.message);
+                            }
+                          }}
+                          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100 transition"
+                          title="Delete Run"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
                   </div>
