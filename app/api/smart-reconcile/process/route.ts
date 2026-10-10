@@ -89,14 +89,40 @@ function normalizeDate(val: any): string {
   }
   const str = String(val).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+
+  // Handle DD-MM-YYYY, DD/MM/YYYY, DD.MM.YYYY
   const parts = str.split(/[\/\-\.]/);
   if (parts.length === 3) {
     if (parts[0].length === 4) {
       return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
     } else {
-      return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+      let day = parts[0].padStart(2, "0");
+      let month = parts[1].padStart(2, "0");
+      let year = parts[2];
+      if (year.length === 2) {
+        year = (Number(year) > 50 ? "19" : "20") + year;
+      }
+      return `${year}-${month}-${day}`;
     }
   }
+
+  // Handle DD-MMM-YYYY e.g. 15-Apr-2026
+  const monthsMap: Record<string, string> = {
+    jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+    jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12"
+  };
+  const mmmMatch = str.match(/^(\d{1,2})[\/\-\.\s]([a-zA-Z]{3})[\/\-\.\s](\d{2,4})$/);
+  if (mmmMatch) {
+    let day = mmmMatch[1].padStart(2, "0");
+    let monthStr = mmmMatch[2].toLowerCase().slice(0, 3);
+    let month = monthsMap[monthStr] || "01";
+    let year = mmmMatch[3];
+    if (year.length === 2) {
+      year = (Number(year) > 50 ? "19" : "20") + year;
+    }
+    return `${year}-${month}-${day}`;
+  }
+
   const parsed = new Date(str);
   if (!isNaN(parsed.getTime())) {
     const y = parsed.getFullYear();
