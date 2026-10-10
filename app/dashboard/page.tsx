@@ -8,6 +8,14 @@ import { ArrowRight, CheckCircle2, Clock, ShieldCheck, Zap } from "lucide-react"
 export default function DashboardPage() {
   const tools = [
     {
+      name: "GSTPoint Smart Reconcile",
+      href: "/smart-reconcile",
+      status: "Available",
+      description: "Advanced GSTR-2B vs Purchase Register reconciliation with header mapping & multi-stage matching.",
+      icon: "🛡️",
+      color: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    },
+    {
       name: "GST Portal Downloader",
       href: "/gst-portal-downloader",
       status: "Available",
@@ -38,14 +46,6 @@ export default function DashboardPage() {
       description: "Check filing status of multiple GSTINs in one go and export the results.",
       icon: "📋",
       color: "bg-purple-50 text-purple-600 border-purple-100",
-    },
-    {
-      name: "GSTR-2B Reconciliation",
-      href: "/reconciliation",
-      status: "Coming Soon",
-      description: "Compare Purchase Register with GSTR-2B and identify mismatches instantly.",
-      icon: "📊",
-      color: "bg-amber-50 text-amber-600 border-amber-100",
     },
     {
       name: "GST Calculators",

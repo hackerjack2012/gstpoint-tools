@@ -25,8 +25,99 @@ model User {
   updatedAt     DateTime  @updatedAt
   payments      Payment[]
   files         File[]
+  reconciliationRuns ReconciliationRun[]
+  mappingTemplates   ReconciliationMappingTemplate[]
 
   @@map("users")
+}
+
+model ReconciliationRun {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  status      String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  taxPeriod   String?
+  totalMatched Int     @default(0)
+  totalMismatch Int    @default(0)
+  totalOnlyPr   Int    @default(0)
+  totalOnly2b   Int    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  sources     ReconciliationSource[]
+  invoices    ReconciliationInvoice[]
+  matches     ReconciliationMatch[]
+
+  @@map("reconciliation_runs")
+}
+
+model ReconciliationSource {
+  id             String   @id @default(cuid())
+  runId          String
+  run            ReconciliationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  sourceType     String   // "PR" (Purchase Register) or "GSTR2B"
+  filename       String
+  originalName   String
+  totalRows      Int      @default(0)
+  columnMapping  String?  // JSON string of mapped columns
+  createdAt      DateTime @default(now())
+
+  @@map("reconciliation_sources")
+}
+
+model ReconciliationInvoice {
+  id             String   @id @default(cuid())
+  runId          String
+  run            ReconciliationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  sourceType     String   // "PR" or "GSTR2B"
+  gstin          String
+  supplierName   String?
+  invoiceNo      String
+  normInvoiceNo  String
+  invoiceDate    String?
+  docType        String   @default("INV") // INV, CRN, DBN
+  taxableValue   Float    @default(0)
+  invoiceValue   Float    @default(0)
+  igst           Float    @default(0)
+  cgst           Float    @default(0)
+  sgst           Float    @default(0)
+  cess           Float    @default(0)
+  gstRate        Float    @default(0)
+  rowNumber      Int
+  rawRowData     String?  // JSON string
+  createdAt      DateTime @default(now())
+
+  @@map("reconciliation_invoices")
+}
+
+model ReconciliationMatch {
+  id             String   @id @default(cuid())
+  runId          String
+  run            ReconciliationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  matchStatus    String   // EXACT, NORMALIZED, AMOUNT_MISMATCH, TAX_MISMATCH, PROBABLE, ONLY_PR, ONLY_2B, DUPLICATE
+  prInvoiceId    String?
+  gstr2bInvoiceId String?
+  confidence     Float    @default(1.0)
+  discrepancies  String?  // JSON details of mismatch
+  reviewStatus   String   @default("PENDING") // PENDING, ACCEPTED, REJECTED, RESOLVED
+  remarks        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("reconciliation_matches")
+}
+
+model ReconciliationMappingTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  sourceType  String   // "PR" or "GSTR2B"
+  mappingJson String   // JSON string of column mappings
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("reconciliation_mapping_templates")
 }
 
 model Payment {
